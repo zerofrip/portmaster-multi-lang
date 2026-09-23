@@ -34,6 +34,7 @@ import { FuzzySearchService } from 'src/app/shared/fuzzySearch';
 import { ExpertiseLevelOverwrite } from '../expertise/expertise-directive';
 import { SaveSettingEvent } from './generic-setting/generic-setting';
 import { ActionIndicatorService } from '../action-indicator';
+import { I18nService } from '../i18n';
 import { SfngDialogService } from '@safing/ui';
 import {
   ExportConfig,
@@ -204,6 +205,7 @@ export class ConfigSettingsViewComponent
     private actionIndicator: ActionIndicatorService,
     private portapi: PortapiService,
     private dialog: SfngDialogService,
+    private i18n: I18nService,
   ) { }
 
   openImportDialog() {
@@ -223,8 +225,8 @@ export class ConfigSettingsViewComponent
 
     if (this.exportMode) {
       this.actionIndicator.info(
-        'Settings Export',
-        'Please select all settings you want to export and press "Save" to generate the export. Note that settings with system defaults cannot be exported and are hidden.'
+        this.i18n.translate('Export Settings'),
+        this.i18n.translate('Please select all settings you want to export and press "Save" to generate the export. Note that settings with system defaults cannot be exported and are hidden.')
       );
     }
   }
@@ -272,7 +274,7 @@ export class ConfigSettingsViewComponent
       },
       error: (err) => {
         const msg = this.actionIndicator.getErrorMessgae(err);
-        this.actionIndicator.error('Failed To Generate Export', msg);
+        this.actionIndicator.error(this.i18n.translate('Failed To Generate Export'), msg);
       },
     });
   }

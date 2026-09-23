@@ -48,23 +48,14 @@ func registerConfig() error {
 	}
 
 	if err := config.Register(&config.Option{
-		Name:           "Time and Date Format",
+		Name:           "Language and Regional Format",
 		Key:            CfgLocaleKey,
-		Description:    "Configures the time and date format for the user interface. Selection is an example and correct formatting in the UI is a continual work in progress.",
+		Description:    "Configures the language and regional format used by the user interface.",
 		OptType:        config.OptTypeString,
 		ExpertiseLevel: config.ExpertiseLevelUser,
 		ReleaseLevel:   config.ReleaseLevelStable,
 		DefaultValue:   getDefaultLocale(),
-		PossibleValues: []config.PossibleValue{
-			{
-				Name:  "24h DD-MM-YYYY",
-				Value: enGBLocale,
-			},
-			{
-				Name:  "12h MM/DD/YYYY",
-				Value: enUSLocale,
-			},
-		},
+		PossibleValues: localePossibleValues(),
 		Annotations: config.Annotations{
 			config.CategoryAnnotation:         "User Interface",
 			config.DisplayHintAnnotation:      config.DisplayHintOneOf,

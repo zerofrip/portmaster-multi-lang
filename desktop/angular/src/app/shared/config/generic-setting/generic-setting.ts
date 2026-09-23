@@ -11,6 +11,7 @@ import { debounceTime, tap } from 'rxjs/operators';
 import { ActionIndicatorService } from '../../action-indicator';
 import { fadeInAnimation, fadeOutAnimation } from '../../animations';
 import { ExpertiseService } from '../../expertise/expertise.service';
+import { I18nService } from '../../i18n';
 import { SPNAccountDetailsComponent } from '../../spn-account-details';
 
 export interface SaveSettingEvent<S extends BaseSetting<any, any> = any> {
@@ -464,6 +465,7 @@ export class GenericSettingComponent<S extends BaseSetting<any, any>> implements
     private spn: SPNService,
     private viewRef: ViewContainerRef,
     private destryoRef: DestroyRef,
+    private i18n: I18nService,
   ) { }
 
   ngOnInit() {
@@ -552,17 +554,17 @@ export class GenericSettingComponent<S extends BaseSetting<any, any>> implements
   restartNow() {
     if (this._setting?.RequiresRestart) {
       this.dialog.confirm({
-        header: 'Restart Portmaster',
-        message: 'Do you want to restart the Portmaster now?',
+        header: this.i18n.translate('Restart Portmaster'),
+        message: this.i18n.translate('Do you want to restart the Portmaster now?'),
         buttons: [
           {
             id: 'no',
-            text: 'Maybe Later',
+            text: this.i18n.translate('Maybe Later'),
             class: 'outline',
           },
           {
             id: 'restart',
-            text: 'Restart',
+            text: this.i18n.translate('Restart'),
             class: 'danger'
           }
         ]
@@ -570,8 +572,8 @@ export class GenericSettingComponent<S extends BaseSetting<any, any>> implements
         .onAction('restart', () =>
           this.portapi.restartPortmaster()
             .subscribe(this.actionIndicator.httpObserver(
-              'Restarting ...',
-              'Failed to Restart',
+              this.i18n.translate('Restarting ...'),
+              this.i18n.translate('Failed to Restart'),
             ))
         )
         .onAction('no', () => {
@@ -590,8 +592,8 @@ export class GenericSettingComponent<S extends BaseSetting<any, any>> implements
           })
         )
         .subscribe(this.actionIndicator.httpObserver(
-          'Reloading UI ...',
-          'Failed to Reload UI',
+          this.i18n.translate('Reloading UI ...'),
+          this.i18n.translate('Failed to Reload UI'),
         ))
     }
   }

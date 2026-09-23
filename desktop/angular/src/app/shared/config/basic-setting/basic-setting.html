@@ -10,7 +10,7 @@
 
         <ng-container *ngIf="!!setting.PossibleValues; else: noPossibleValues">
           <ng-container *ngFor="let opt of setting.PossibleValues">
-            <sfng-select-item *sfngSelectValue="opt.Value; description: opt.Description">{{opt.Name}}</sfng-select-item>
+            <sfng-select-item *sfngSelectValue="opt.Value; description: opt.Description | translate">{{opt.Name | translate}}</sfng-select-item>
           </ng-container>
         </ng-container>
 

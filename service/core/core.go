@@ -57,6 +57,10 @@ func prep() error {
 		return err
 	}
 
+	if err := registerLocales(); err != nil {
+		return err
+	}
+
 	if err := registerAPIEndpoints(); err != nil {
 		return err
 	}
@@ -64,6 +68,8 @@ func prep() error {
 	if err := initModulesIntegration(); err != nil {
 		return err
 	}
+
+	logLoadedLocales()
 
 	return nil
 }

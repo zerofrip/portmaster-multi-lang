@@ -3,7 +3,7 @@ import { OverlayModule } from '@angular/cdk/overlay';
 import { PortalModule } from '@angular/cdk/portal';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CdkTableModule } from '@angular/cdk/table';
-import { CommonModule, registerLocaleData } from '@angular/common';
+import { CommonModule } from '@angular/common';
 
 import { APP_INITIALIZER, LOCALE_ID, NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -13,12 +13,11 @@ import { FaIconLibrary, FontAwesomeModule } from '@fortawesome/angular-fontaweso
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { far } from '@fortawesome/free-regular-svg-icons';
 import { fas } from '@fortawesome/free-solid-svg-icons';
-import { ConfigService, PortmasterAPIModule, StringSetting, getActualValue } from '@safing/portmaster-api';
+import { PortmasterAPIModule } from '@safing/portmaster-api';
 import { OverlayStepperModule, SfngAccordionModule, SfngDialogModule, SfngDropDownModule, SfngPaginationModule, SfngSelectModule, SfngTipUpModule, SfngToggleSwitchModule, SfngTooltipModule, TabModule, UiModule } from '@safing/ui';
 import MyYamlFile from 'js-yaml-loader!../i18n/helptexts.yaml';
 import * as i18n from 'ng-zorro-antd/i18n';
 import { MarkdownModule } from 'ngx-markdown';
-import { firstValueFrom } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -71,58 +70,10 @@ import { AppInsightsComponent } from './pages/app-view/app-insights/app-insights
 import { AppFingerprintPipe } from './pages/app-view/app-fingerprint.pipe';
 import { INTEGRATION_SERVICE, integrationServiceFactory } from './integration';
 import { SupportProgressDialogComponent } from './pages/support/progress-dialog';
+import { I18nModule, I18nService } from './shared/i18n';
 
-function loadAndSetLocaleInitializer(configService: ConfigService) {
-  return async function () {
-    let angularLocaleID = 'en-GB';
-    let nzLocaleID: string = 'en_GB';
-
-    try {
-      const setting = await firstValueFrom(configService.get("core/locale"))
-
-      const currentValue = getActualValue(setting as StringSetting);
-      switch (currentValue) {
-        case 'en-US':
-          angularLocaleID = 'en-US'
-          nzLocaleID = 'en_US'
-          break;
-        case 'en-GB':
-          angularLocaleID = 'en-GB'
-          nzLocaleID = 'en_GB'
-          break;
-
-        default:
-          console.error(`Unsupported locale value: ${currentValue}, defaulting to en-GB`)
-      }
-    } catch (err) {
-      console.error(`failed to get locale setting, using default en-GB:`, err)
-    }
-
-    try {
-      // Get name of module.
-      let localeModuleID = angularLocaleID;
-      if (localeModuleID == "en-US") {
-        localeModuleID = "en";
-      }
-
-      /* webpackInclude: /(en|en-GB)\.mjs$/ */
-      /* webpackChunkName: "./l10n-base/[request]"*/
-      await import(`../../node_modules/@angular/common/locales/${localeModuleID}.mjs`)
-        .then(locale => {
-          registerLocaleData(locale.default)
-
-          localeConfig.localeId = angularLocaleID;
-          localeConfig.nzLocale = (i18n as any)[nzLocaleID];
-        })
-    } catch (err) {
-      console.error(`failed to load locale module for ${angularLocaleID}:`, err)
-    }
-  }
-}
-
-const localeConfig = {
-  nzLocale: i18n.en_GB,
-  localeId: 'en-GB'
+function i18nInitializer(i18nService: I18nService) {
+  return () => i18nService.initialize();
 }
 
 @NgModule({
@@ -197,6 +148,7 @@ const localeConfig = {
     SfngAppIconModule,
     ExpertiseModule,
     ConfigModule,
+    I18nModule,
     CountryFlagModule,
     CountIndicatorModule,
     NetqueryModule,
@@ -211,19 +163,20 @@ const localeConfig = {
   bootstrap: [AppComponent],
   providers: [
     {
-      provide: APP_INITIALIZER, useFactory: loadAndSetLocaleInitializer, deps: [ConfigService], multi: true
+      provide: APP_INITIALIZER,
+      useFactory: i18nInitializer,
+      deps: [I18nService],
+      multi: true,
     },
     {
-      provide: i18n.NZ_I18N, useFactory: () => {
-        console.log("nz-locale is set to", localeConfig.nzLocale)
-        return localeConfig.nzLocale
-      }
+      provide: i18n.NZ_I18N,
+      useFactory: (svc: I18nService) => svc.getNzLocale(),
+      deps: [I18nService],
     },
     {
-      provide: LOCALE_ID, useFactory: () => {
-        console.log("locale-id is set to", localeConfig.localeId)
-        return localeConfig.localeId
-      }
+      provide: LOCALE_ID,
+      useFactory: (svc: I18nService) => svc.getLocaleId(),
+      deps: [I18nService],
     },
     {
       provide: INTEGRATION_SERVICE,

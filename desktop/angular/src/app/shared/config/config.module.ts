@@ -13,6 +13,7 @@ import {
 import { MarkdownModule } from 'ngx-markdown';
 import { ExpertiseModule } from '../expertise/expertise.module';
 import { SfngFocusModule } from '../focus';
+import { I18nModule } from '../i18n';
 import { SfngMenuModule } from '../menu';
 import { SfngMultiSwitchModule } from '../multi-switch';
 import { BasicSettingComponent } from './basic-setting/basic-setting';
@@ -39,6 +40,7 @@ import { SfngAppIconModule } from '../app-icon';
     SfngSelectModule,
     SfngMultiSwitchModule,
     SfngFocusModule,
+    I18nModule,
     SfngMenuModule,
     SfngTipUpModule,
     FontAwesomeModule,
