@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/safing/portmaster/base/api"
-	"github.com/safing/portmaster/base/config"
 	"github.com/safing/portmaster/base/database"
 	"github.com/safing/portmaster/base/database/query"
+	"github.com/safing/portmaster/service/tunnel"
 	"github.com/safing/portmaster/spn/conf"
 )
 
@@ -50,8 +50,7 @@ func handleReInit(ar *api.Request) (msg string, err error) {
 	}
 
 	// Start SPN if it is enabled.
-	enabled := config.GetAsBool("spn/enable", false)
-	if enabled() {
+	if tunnel.ConfiguredMode() == tunnel.ModeSPN {
 		module.mgr.Go("ensure SPN is started", module.instance.SPNGroup().EnsureStartedWorker)
 	}
 

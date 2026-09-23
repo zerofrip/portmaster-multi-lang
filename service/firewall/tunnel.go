@@ -13,8 +13,8 @@ import (
 	"github.com/safing/portmaster/service/profile"
 	"github.com/safing/portmaster/service/profile/endpoints"
 	"github.com/safing/portmaster/service/resolver"
+	tunnelmgr "github.com/safing/portmaster/service/tunnel"
 	"github.com/safing/portmaster/spn/captain"
-	"github.com/safing/portmaster/spn/crew"
 	"github.com/safing/portmaster/spn/navigator"
 	"github.com/safing/portmaster/spn/sluice"
 )
@@ -22,7 +22,7 @@ import (
 func checkTunneling(ctx context.Context, conn *network.Connection) {
 	// Check if the connection should be tunneled at all.
 	switch {
-	case !tunnelEnabled():
+	case tunnelmgr.ConfiguredMode() == tunnelmgr.ModeOff:
 		// Tunneling is disabled.
 		return
 	case !conn.Entity.IPScope.IsGlobal():
@@ -40,9 +40,9 @@ func checkTunneling(ctx context.Context, conn *network.Connection) {
 	case conn.Process().Pid == ownPID:
 		// Bypass tunneling for certain own connections.
 		switch {
-		case !captain.ClientReady():
+		case !tunnelmgr.Ready():
 			return
-		case captain.IsExcepted(conn.Entity.IP):
+		case tunnelmgr.IsExcepted(conn.Entity.IP):
 			return
 		}
 	}
@@ -108,10 +108,10 @@ func checkTunneling(ctx context.Context, conn *network.Connection) {
 	conn.SaveWhenFinished()
 
 	// Check if ready.
-	if !captain.ClientReady() {
-		// Block connection as SPN is not ready yet.
-		log.Tracer(ctx).Trace("SPN not ready for tunneling")
-		conn.Failed("SPN not ready for tunneling", "")
+	if !tunnelmgr.Ready() {
+		// Fail closed while the selected provider is starting or failed.
+		log.Tracer(ctx).Trace("selected tunnel provider not ready")
+		conn.Failed("selected tunnel provider not ready", tunnelmgr.CfgModeKey)
 		return
 	}
 
@@ -126,11 +126,13 @@ func requestTunneling(ctx context.Context, conn *network.Connection) error {
 		return errors.New("no profile set")
 	}
 
-	// Get tunnel options.
-	conn.TunnelOpts = DeriveTunnelOptions(layeredProfile, conn.Process(), conn.Entity, conn.Encrypted)
+	// SPN needs route options. WireGuard uses the destination directly.
+	if tunnelmgr.ConfiguredMode() == tunnelmgr.ModeSPN {
+		conn.TunnelOpts = DeriveTunnelOptions(layeredProfile, conn.Process(), conn.Entity, conn.Encrypted)
+	}
 
 	// Queue request in sluice.
-	err := sluice.AwaitRequest(conn, crew.HandleSluiceRequest)
+	err := sluice.AwaitRequest(conn, tunnelmgr.Handle)
 	if err != nil {
 		return err
 	}

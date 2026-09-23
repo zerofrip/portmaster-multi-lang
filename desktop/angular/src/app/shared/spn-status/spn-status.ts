@@ -1,11 +1,17 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { ActivatedRoute, Router } from '@angular/router';
-import { BoolSetting, ChartResult, ConfigService, FeatureID, Netquery, SPNService, SPNStatus, UserProfile } from "@safing/portmaster-api";
+import { ChartResult, ConfigService, FeatureID, Netquery, PortapiService, Record as PortmasterRecord, SPNService, SPNStatus, StringSetting, UserProfile } from "@safing/portmaster-api";
 import { SfngDialogService } from '@safing/ui';
-import { catchError, forkJoin, interval, of, startWith, switchMap } from "rxjs";
+import { catchError, concatMap, finalize, forkJoin, from, interval, map, of, startWith, switchMap } from "rxjs";
 import { fadeInAnimation, fadeOutAnimation } from "../animations";
 import { SPNAccountDetailsComponent } from '../spn-account-details';
+
+interface WireGuardStatus extends PortmasterRecord {
+  State: 'disabled' | 'connecting' | 'connected' | 'failed';
+  LastError: string;
+  ConnectedSince: string | null;
+}
 
 @Component({
   selector: 'app-spn-status',
@@ -19,8 +25,14 @@ import { SPNAccountDetailsComponent } from '../spn-account-details';
 export class SPNStatusComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
 
-  /** Whether or not the SPN is currently enabled */
-  spnEnabled = false;
+  tunnelMode: 'off' | 'spn' | 'wireguard' = 'off';
+
+  wireGuardStatus: WireGuardStatus | null = null;
+  wireGuardImporting = false;
+  wireGuardImportFailed = false;
+  wireGuardImportMessage = '';
+
+  get spnEnabled() { return this.tunnelMode === 'spn'; }
 
   /** The chart data for the SPN connection chart */
   spnConnChart: ChartResult[] = [];
@@ -41,6 +53,7 @@ export class SPNStatusComponent implements OnInit {
 
   constructor(
     private configService: ConfigService,
+    private portapi: PortapiService,
     private spnService: SPNService,
     private netquery: Netquery,
     private cdr: ChangeDetectorRef,
@@ -70,10 +83,10 @@ export class SPNStatusComponent implements OnInit {
         this.cdr.markForCheck();
       })
 
-    this.configService.watch<BoolSetting>("spn/enable")
+    this.configService.watch<StringSetting>("network/tunnel/mode")
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(value => {
-        this.spnEnabled = value;
+        this.tunnelMode = value as typeof this.tunnelMode;
 
         // If the user disabled the SPN clear the connection chart
         // as well.
@@ -81,6 +94,13 @@ export class SPNStatusComponent implements OnInit {
           this.spnConnChart = [];
         }
 
+        this.cdr.markForCheck();
+      });
+
+    this.portapi.watch<WireGuardStatus>('runtime:wireguard/status', { ignoreDelete: true })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(status => {
+        this.wireGuardStatus = status;
         this.cdr.markForCheck();
       });
 
@@ -121,8 +141,60 @@ export class SPNStatusComponent implements OnInit {
     this.router.navigate(['/spn'])
   }
 
-  setSPNEnabled(v: boolean) {
-    this.configService.save(`spn/enable`, v)
+  setTunnelMode(mode: 'off' | 'spn' | 'wireguard') {
+    if (mode === 'spn' && !this.packageHasSPN) {
+      this.openOrLogin();
+      return;
+    }
+    this.configService.save('network/tunnel/mode', mode)
       .subscribe();
+  }
+
+  importWireGuardProfile(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.item(0);
+    input.value = '';
+    if (!file) {
+      return;
+    }
+
+    // WireGuard profiles are only a few KiB. The limit avoids retaining an
+    // accidentally selected large file as a sensitive configuration value.
+    if (file.size === 0 || file.size > 256 * 1024) {
+      this.setWireGuardImportResult(false, 'Select a non-empty WireGuard profile smaller than 256 KiB.');
+      return;
+    }
+
+    this.wireGuardImporting = true;
+    this.wireGuardImportFailed = false;
+    this.wireGuardImportMessage = 'Importing WireGuard profile ...';
+    this.cdr.markForCheck();
+
+    from(file.text())
+      .pipe(
+        map(profile => {
+          if (!profile.trim()) {
+            throw new Error('empty profile');
+          }
+          return profile;
+        }),
+        concatMap(profile => this.configService.save('wireguard/config', profile)),
+        concatMap(() => this.configService.save('network/tunnel/mode', 'wireguard')),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => {
+          this.wireGuardImporting = false;
+          this.cdr.markForCheck();
+        }),
+      )
+      .subscribe({
+        complete: () => this.setWireGuardImportResult(true, 'WireGuard profile imported. Connecting ...'),
+        error: () => this.setWireGuardImportResult(false, 'The WireGuard profile could not be imported.'),
+      });
+  }
+
+  private setWireGuardImportResult(success: boolean, message: string) {
+    this.wireGuardImportFailed = !success;
+    this.wireGuardImportMessage = message;
+    this.cdr.markForCheck();
   }
 }

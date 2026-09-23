@@ -1,5 +1,5 @@
 <div class="relative flex flex-col justify-center w-full">
-  <sfng-netquery-line-chart  *ngIf="spnEnabled && !!spnConnChart.length" [@fadeIn] [@fadeOut]
+  <sfng-netquery-line-chart  *ngIf="tunnelMode !== 'off' && !!spnConnChart.length" [@fadeIn] [@fadeOut]
     [data]="spnConnChart" showAxis="false"
           [config]="{
             series: {
@@ -13,9 +13,17 @@
   </sfng-netquery-line-chart>
 
   <div class="relative flex flex-col justify-start gap-1 px-8 py-4">
-    <h2 class="p-0 m-0 font-light outline-none cursor-pointer test-base" [routerLink]="['/spn']">SPN</h2>
+    <h2 class="p-0 m-0 font-light outline-none cursor-pointer test-base" [routerLink]="['/spn']">Tunnel</h2>
 
-    <span [ngSwitch]="spnStatus?.Status" class="-mt-1 text-xs font-medium text-secondary">
+    <span *ngIf="tunnelMode === 'wireguard'" [ngSwitch]="wireGuardStatus?.State"
+      class="-mt-1 text-xs font-medium text-secondary">
+      <ng-template ngSwitchCase="disabled">Import a profile to connect</ng-template>
+      <ng-template ngSwitchCase="connecting">Connecting with WireGuard ...</ng-template>
+      <ng-template ngSwitchCase="connected">Protected by WireGuard</ng-template>
+      <ng-template ngSwitchCase="failed">WireGuard connection failed</ng-template>
+      <ng-template ngSwitchDefault>Loading WireGuard status ...</ng-template>
+    </span>
+    <span *ngIf="tunnelMode !== 'wireguard'" [ngSwitch]="spnStatus?.Status" class="-mt-1 text-xs font-medium text-secondary">
       <ng-template ngSwitchCase="disabled">
         Increase privacy protection
       </ng-template>
@@ -35,10 +43,31 @@
       </span>
     </ng-container>
 
-    <sfng-toggle [ngModel]="spnEnabled" (ngModelChange)="setSPNEnabled($event)"
-      *ngIf="spnEnabled || packageHasSPN"></sfng-toggle>
+    <sfng-select [ngModel]="tunnelMode" (ngModelChange)="setTunnelMode($event)" mode="single" dynamicValues="false">
+      <sfng-select-item *sfngSelectValue="'off'">Off</sfng-select-item>
+      <sfng-select-item *sfngSelectValue="'spn'">SPN</sfng-select-item>
+      <sfng-select-item *sfngSelectValue="'wireguard'">WireGuard</sfng-select-item>
+    </sfng-select>
 
-    <div *ngIf="!packageHasSPN">
+    <div *ngIf="tunnelMode === 'wireguard'" class="flex flex-col items-start gap-1 mt-1">
+      <input #wireGuardProfileInput type="file" class="hidden" accept=".conf,text/plain"
+        aria-label="Select WireGuard profile"
+        [disabled]="wireGuardImporting"
+        (change)="importWireGuardProfile($event)">
+      <button type="button"
+        class="px-3 py-1.5 uppercase rounded outline-none text-xxs custom bg-blue hover:bg-blue bg-opacity-70 disabled:opacity-50"
+        [disabled]="wireGuardImporting"
+        (click)="wireGuardProfileInput.click()">
+        {{ wireGuardImporting ? 'Importing ...' : 'Import profile & connect' }}
+      </button>
+      <span *ngIf="wireGuardImportMessage" role="status" aria-live="polite" class="text-xxs"
+        [class.text-red-300]="wireGuardImportFailed"
+        [class.text-secondary]="!wireGuardImportFailed">
+        {{ wireGuardImportMessage }}
+      </span>
+    </div>
+
+    <div *ngIf="!packageHasSPN && tunnelMode !== 'wireguard'">
       <button class="px-3 py-1.5 uppercase rounded outline-none text-xxs custom bg-blue hover:bg-blue bg-opacity-70"
         (click)="openOrLogin()">
         Upgrade

@@ -319,16 +319,16 @@ export class SpnPageComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Toggle the spn/enable setting. This does NOT update the view as that
+   * Toggle SPN through the exclusive tunnel mode. This does NOT update the view as that
    * will happen as soon as we get an update from the db qsub.
    *
    * @private - template only
    */
   toggleSPN() {
-    this.configService.get('spn/enable')
+    this.configService.get('network/tunnel/mode')
       .pipe(
         map(setting => setting.Value ?? setting.DefaultValue),
-        mergeMap(active => this.configService.save('spn/enable', !active))
+        mergeMap(mode => this.configService.save('network/tunnel/mode', mode === 'spn' ? 'off' : 'spn'))
       )
       .subscribe()
   }

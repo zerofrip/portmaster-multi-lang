@@ -136,7 +136,6 @@ var (
 	devMode          config.BoolOption
 	apiListenAddress config.StringOption
 
-	tunnelEnabled     config.BoolOption
 	useCommunityNodes config.BoolOption
 
 	configReady = abool.New()
@@ -146,7 +145,6 @@ func getConfig() {
 	devMode = config.Concurrent.GetAsBool(core.CfgDevModeKey, false)
 	apiListenAddress = config.GetAsString(api.CfgDefaultListenAddressKey, "")
 
-	tunnelEnabled = config.Concurrent.GetAsBool(captain.CfgOptionEnableSPNKey, false)
 	useCommunityNodes = config.Concurrent.GetAsBool(captain.CfgOptionUseCommunityNodesKey, true)
 
 	configReady.Set()

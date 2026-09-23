@@ -270,6 +270,31 @@ export const subsystems : SubsystemWithExpertise[] = [
     }
   },
   {
+    minimumExpertise: ExpertiseLevelNumber.user,
+    isDisabled: false,
+    hasUserDefinedValues: false,
+    ID: "wireguard",
+    Name: "WireGuard",
+    Description: "Configure the WireGuard tunnel provider",
+    Modules: [
+      {
+        Name: "wireguard",
+        Enabled: true
+      }
+    ],
+    ToggleOptionKey: "",
+    ExpertiseLevel: "user",
+    ReleaseLevel: 0,
+    ConfigKeySpace: "config:wireguard/",
+    _meta: {
+      Created: 0,
+      Modified: 0,
+      Expires: 0,
+      Deleted: 0,
+      Key: "runtime:subsystems/wireguard"
+    }
+  },
+  {
   minimumExpertise: ExpertiseLevelNumber.user,  // User level since UI is user-facing
   isDisabled: false,
   hasUserDefinedValues: false,

@@ -38,8 +38,10 @@ import (
 	"github.com/safing/portmaster/service/splittun"
 	"github.com/safing/portmaster/service/status"
 	"github.com/safing/portmaster/service/sync"
+	"github.com/safing/portmaster/service/tunnel"
 	"github.com/safing/portmaster/service/ui"
 	"github.com/safing/portmaster/service/updates"
+	"github.com/safing/portmaster/service/wireguard"
 	"github.com/safing/portmaster/spn/access"
 	"github.com/safing/portmaster/spn/cabin"
 	"github.com/safing/portmaster/spn/captain"
@@ -102,6 +104,8 @@ type Instance struct {
 	sync          *sync.Sync
 	control       *control.Control
 	interop       *interop.Interoperability
+	tunnelManager *tunnel.Manager
+	wireguard     *wireguard.Module
 
 	splittun *splittun.SplitTunModule
 
@@ -207,6 +211,14 @@ func New(svcCfg *ServiceConfig) (*Instance, error) { //nolint:maintidx
 	instance.netenv, err = netenv.New(instance)
 	if err != nil {
 		return instance, fmt.Errorf("create netenv module: %w", err)
+	}
+	instance.wireguard, err = wireguard.New()
+	if err != nil {
+		return instance, fmt.Errorf("create WireGuard module: %w", err)
+	}
+	instance.tunnelManager, err = tunnel.New(instance)
+	if err != nil {
+		return instance, fmt.Errorf("create tunnel manager: %w", err)
 	}
 	instance.ui, err = ui.New(instance)
 	if err != nil {
@@ -352,6 +364,8 @@ func New(svcCfg *ServiceConfig) (*Instance, error) { //nolint:maintidx
 		instance.integration,
 		instance.geoip,
 		instance.netenv,
+		instance.sluice,
+		instance.wireguard,
 
 		instance.process,
 		instance.profile,
@@ -380,6 +394,7 @@ func New(svcCfg *ServiceConfig) (*Instance, error) { //nolint:maintidx
 		instance.control,
 
 		instance.access,
+		instance.tunnelManager,
 	)
 
 	// SPN Group
@@ -391,9 +406,11 @@ func New(svcCfg *ServiceConfig) (*Instance, error) { //nolint:maintidx
 		instance.docks,
 		instance.patrol,
 		instance.ships,
-		instance.sluice,
 		instance.terminal,
 	)
+	if err := tunnel.RegisterProvider(spnTunnelProvider{instance: instance}); err != nil {
+		return instance, fmt.Errorf("register SPN tunnel provider: %w", err)
+	}
 
 	return instance, nil
 }

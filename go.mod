@@ -70,6 +70,7 @@ require (
 	golang.org/x/net v0.58.0
 	golang.org/x/sync v0.22.0
 	golang.org/x/sys v0.47.0
+	golang.zx2c4.com/wireguard v0.0.0-20260522210424-ecfc5a8d5446
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.40.1
 	zombiezen.com/go/sqlite v1.4.2
@@ -78,8 +79,12 @@ require (
 require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
+	github.com/google/btree v1.1.2 // indirect
 	github.com/sergeymakinen/go-bmp v1.0.0 // indirect
 	github.com/stephenafamo/sqlparser v0.0.0-20250521201114-5cfed001272d // indirect
+	golang.org/x/time v0.7.0 // indirect
+	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
+	gvisor.dev/gvisor v0.0.0-20250503011706-39ed1f5ac29c // indirect
 )
 
 require (

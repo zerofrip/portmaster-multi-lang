@@ -77,32 +77,8 @@ func start() error {
 	}
 
 	if conf.Integrated() {
-		// Add config listener to enable/disable SPN.
-		module.instance.Config().EventConfigChange.AddCallback("spn enable check", func(wc *mgr.WorkerCtx, s struct{}) (bool, error) {
-			// Do not do anything when we are shutting down.
-			if module.instance.IsShuttingDown() {
-				return true, nil
-			}
-
-			enabled := config.GetAsBool("spn/enable", false)
-			if enabled() {
-				log.Info("spn: starting SPN")
-				module.mgr.Go("ensure SPN is started", module.instance.SPNGroup().EnsureStartedWorker)
-			} else {
-				log.Info("spn: stopping SPN")
-				module.mgr.Go("ensure SPN is stopped", module.instance.SPNGroup().EnsureStoppedWorker)
-			}
-			return false, nil
-		})
-
 		// Load tokens from database.
 		loadTokens()
-
-		// Check if we need to enable SPN now.
-		enabled := config.GetAsBool("spn/enable", false)
-		if enabled() {
-			module.mgr.Go("ensure SPN is started", module.instance.SPNGroup().EnsureStartedWorker)
-		}
 
 		// Register new task.
 		module.updateAccountWorkerMgr.Delay(1 * time.Minute)
@@ -183,14 +159,18 @@ func UpdateAccount(_ *mgr.WorkerCtx) error {
 }
 
 func enableSPN() {
-	err := config.SetConfigOption("spn/enable", true)
+	err := config.SetConfigOption("network/tunnel/mode", "spn")
 	if err != nil {
 		log.Warningf("spn/access: failed to enable the SPN during login: %s", err)
 	}
 }
 
 func disableSPN() {
-	err := config.SetConfigOption("spn/enable", false)
+	activeMode := config.GetAsString("network/tunnel/mode", "off")
+	if activeMode() != "spn" {
+		return
+	}
+	err := config.SetConfigOption("network/tunnel/mode", "off")
 	if err != nil {
 		log.Warningf("spn/access: failed to disable the SPN during logout: %s", err)
 	}
